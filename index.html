@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load('current', { packages: ['corechart'] });
+  </script>
+
+  <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+</head>
+
+<body>
+  <main role="main" aria-label="相互評価システム メインコンテンツ">
+    <section id="headerSection" class="header-block" role="banner" aria-label="ヘッダー">
+      <div class="header-inner">
+        <h1 id="pageTitle">Loading...</h1>
+        <div class="header-right">
+          <div id="userInfoDisplay" class="user-info" role="status" aria-live="polite" aria-label="ユーザー情報"></div>
+          <div id="resultButtonContainer" class="result-link-wrapper">
+            <button id="showResultsButton" class="link-style-button is-hidden"
+              aria-label="自分が受けた評価結果を表示する">受けた評価を見る</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="targetSelectionSection" class="content-block" role="region" aria-labelledby="targetSelectionHeading">
+      <h2 id="targetSelectionHeading">評価対象の選択</h2>
+      <div id="targetListContainer" class="target-list-container" role="list" aria-label="評価対象一覧" aria-live="polite">
+        データ取得中...</div>
+    </section>
+
+    <section id="evaluationFormSection" class="content-block is-hidden" role="region" aria-labelledby="formTitle">
+      <h2 id="formTitle">評価の入力</h2>
+      <div class="flex-space-between" role="toolbar" aria-label="フォーム操作">
+        <button id="backToTargetsButtonFromForm" aria-label="評価対象一覧に戻る">一覧に戻る</button>
+        <button id="submitEvaluationButton" class="primary-button" aria-label="評価を送信する">回答を送信</button>
+      </div>
+      <div id="formContainer" class="form-container" role="form" aria-label="評価入力フォーム"></div>
+    </section>
+
+    <section id="resultsDisplaySection" class="content-block is-hidden" role="region" aria-labelledby="resultsTitle">
+      <h2 id="resultsTitle">受けた評価</h2>
+      <div class="action-bar" role="toolbar" aria-label="結果画面操作">
+        <button id="backToTargetsButtonFromResults" aria-label="評価対象一覧に戻る">一覧に戻る</button>
+      </div>
+
+      <div class="result-section-divider" role="group" aria-labelledby="chartSectionHeading">
+        <h3 id="chartSectionHeading">選択肢による評価</h3>
+      </div>
+      <div id="chartContainer" class="chart-wrapper" role="img" aria-label="評価結果グラフ">集計データなし</div>
+
+      <div class="result-section-divider" role="group" aria-labelledby="commentsSectionHeading">
+        <h3 id="commentsSectionHeading">文章による評価</h3>
+      </div>
+      <div id="commentsContainer" class="comments-container" role="list" aria-label="コメント一覧"></div>
+    </section>
+  </main>
+
+  <dialog id="loadingModal" role="alertdialog" aria-labelledby="loadingModalTitle" aria-describedby="loadingText"
+    aria-modal="true">
+    <div class="modal-header loading-modal-header">
+      <h3 id="loadingModalTitle">処理中</h3>
+    </div>
+    <div class="modal-body">
+      <div class="spinner" role="img" aria-label="読み込み中">⏳</div>
+      <span id="loadingText" aria-live="polite">通信中...お待ちください</span>
+    </div>
+  </dialog>
+
+  <dialog id="errorModal" role="alertdialog" aria-labelledby="errorModalTitle" aria-describedby="errorMessage"
+    aria-modal="true">
+    <div class="modal-header error-modal-header">
+      <h3 id="errorModalTitle">エラー</h3>
+    </div>
+    <div class="modal-body">
+      <div class="modal-symbol" role="img" aria-label="警告アイコン">⚠️</div>
+      <p id="errorMessage" role="alert"></p>
+    </div>
+  </dialog>
+
+  <dialog id="warningModal" role="alertdialog" aria-labelledby="warningModalTitle" aria-describedby="warningMessage"
+    aria-modal="true">
+    <div class="modal-header warning-modal-header">
+      <h3 id="warningModalTitle">未入力項目</h3>
+    </div>
+    <div class="modal-body">
+      <div class="modal-symbol" role="img" aria-label="入力アイコン">📝</div>
+      <p id="warningMessage" role="alert"></p>
+    </div>
+  </dialog>
+  <?!= HtmlService.createHtmlOutputFromFile('script').getContent(); ?>
+
+</body>
+
+</html>

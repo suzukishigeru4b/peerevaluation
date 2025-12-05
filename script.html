@@ -1,0 +1,689 @@
+<script>
+    const APP_CONSTANTS = {
+        INPUT_ID_PREFIX: "q_",
+        CHART_COLORS: ['#4285F4', '#8AB4F8', '#F4B400', '#E0E0E0']
+    };
+
+    // ==================================================
+    // Security Utilities
+    // ==================================================
+    const SecurityUtils = {
+        /**
+         * HTMLエスケープ処理 - XSS対策
+         * @param {string} str - エスケープする文字列
+         * @returns {string} - エスケープされた文字列
+         */
+        escapeHtml: function (str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        },
+
+        /**
+         * 入力値のサニタイズ - 危険な文字を除去
+         * @param {string} str - サニタイズする文字列
+         * @returns {string} - サニタイズされた文字列
+         */
+        sanitizeInput: function (str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                .replace(/<[^>]+>/g, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+\s*=/gi, '')
+                .trim();
+        },
+
+        /**
+         * URLの安全性検証
+         * @param {string} url - 検証するURL
+         * @returns {boolean} - 安全なURLかどうか
+         */
+        isSafeUrl: function (url) {
+            if (!url) return false;
+            try {
+                const parsed = new URL(url, window.location.origin);
+                return ['http:', 'https:'].includes(parsed.protocol);
+            } catch {
+                return false;
+            }
+        },
+
+        /**
+         * テキストノードとして安全に要素に設定
+         * @param {HTMLElement} element - 対象要素
+         * @param {string} text - 設定するテキスト
+         */
+        setTextSafely: function (element, text) {
+            if (element) {
+                element.textContent = text != null ? String(text) : '';
+            }
+        }
+    };
+
+    let appState = {
+        userEmail: "",
+        userName: "",
+        userGroup: "",
+        currentTargetName: "",
+        summaryDataCache: null,
+        // キャッシュ用
+        systemConfig: null,
+        groupListCache: null,
+        formDataCache: {},  // targetNameをキーとしたフォームデータのキャッシュ
+        lastFetchTime: null,
+        CACHE_TTL_MS: 5 * 60 * 1000  // 5分間のキャッシュ有効期限
+    };
+
+    // ==================================================
+    // Cache Utilities
+    // ==================================================
+    const CacheUtils = {
+        /**
+         * キャッシュが有効かどうかチェック
+         * @returns {boolean}
+         */
+        isCacheValid: function () {
+            if (!appState.lastFetchTime || !appState.groupListCache) return false;
+            return (Date.now() - appState.lastFetchTime) < appState.CACHE_TTL_MS;
+        },
+
+        /**
+         * キャッシュをクリア
+         */
+        clearCache: function () {
+            appState.groupListCache = null;
+            appState.formDataCache = {};
+            appState.lastFetchTime = null;
+        },
+
+        /**
+         * グループリストの特定項目をローカル更新
+         * @param {string} targetName - 更新対象名
+         * @param {Date} timestamp - 新しいタイムスタンプ
+         */
+        updateGroupListEntry: function (targetName, timestamp) {
+            if (appState.groupListCache) {
+                const entry = appState.groupListCache.find(row => row[0] === targetName);
+                if (entry) {
+                    entry[1] = timestamp;
+                }
+            }
+        },
+
+        /**
+         * フォームデータキャッシュを取得
+         * @param {string} targetName
+         * @returns {object|null}
+         */
+        getFormCache: function (targetName) {
+            return appState.formDataCache[targetName] || null;
+        },
+
+        /**
+         * フォームデータキャッシュを保存
+         * @param {string} targetName
+         * @param {object} data
+         */
+        setFormCache: function (targetName, data) {
+            appState.formDataCache[targetName] = data;
+        }
+    };
+
+    let dom = {};
+
+    window.addEventListener('load', initializeApp);
+
+    function initializeApp() {
+        cacheDomElements();
+        setupEventListeners();
+        fetchInitialData();
+    }
+
+    function cacheDomElements() {
+        dom = {
+            pageTitle: document.getElementById("pageTitle"),
+            userInfoDisplay: document.getElementById("userInfoDisplay"),
+            showResultsButton: document.getElementById("showResultsButton"),
+            targetListContainer: document.getElementById("targetListContainer"),
+            formTitle: document.getElementById("formTitle"),
+            formContainer: document.getElementById("formContainer"),
+            resultsTitle: document.getElementById("resultsTitle"),
+            chartContainer: document.getElementById("chartContainer"),
+            commentsContainer: document.getElementById("commentsContainer"),
+            submitEvaluationButton: document.getElementById("submitEvaluationButton"),
+            backButtonForm: document.getElementById("backToTargetsButtonFromForm"),
+            backButtonResults: document.getElementById("backToTargetsButtonFromResults"),
+            sections: {
+                targetSelectionSection: document.getElementById('targetSelectionSection'),
+                evaluationFormSection: document.getElementById('evaluationFormSection'),
+                resultsDisplaySection: document.getElementById('resultsDisplaySection'),
+            },
+            loadingModal: {
+                dialog: document.getElementById("loadingModal"),
+                text: document.getElementById("loadingText")
+            },
+            errorModal: {
+                dialog: document.getElementById("errorModal"),
+                text: document.getElementById("errorMessage")
+            },
+            warningModal: {
+                dialog: document.getElementById("warningModal"),
+                text: document.getElementById("warningMessage")
+            }
+        };
+    }
+
+    function setupEventListeners() {
+        dom.targetListContainer.addEventListener('click', function (event) {
+            const tr = event.target.closest('tr');
+            if (tr && tr.classList.contains('clickable-row')) {
+                const targetId = tr.dataset.target;
+                if (targetId) {
+                    fetchEvaluationForm(targetId);
+                }
+            }
+        });
+
+        dom.submitEvaluationButton.addEventListener('click', submitEvaluation);
+        dom.showResultsButton.addEventListener('click', fetchFeedbackResults);
+
+        const goBack = () => fetchInitialData();
+        dom.backButtonForm.addEventListener('click', goBack);
+        dom.backButtonResults.addEventListener('click', goBack);
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (!dom.sections.resultsDisplaySection.classList.contains('is-hidden')) {
+                    renderChart(appState.summaryDataCache);
+                }
+            }, 200);
+        });
+    }
+
+    function switchView(activeSectionId) {
+        Object.entries(dom.sections).forEach(([id, el]) => {
+            if (id === activeSectionId) {
+                el.classList.remove('is-hidden');
+            } else {
+                el.classList.add('is-hidden');
+            }
+        });
+        document.querySelector('main').scrollTo(0, 0);
+    }
+
+    function fetchInitialData(loadingText = "グループ一覧作成中．．．", forceRefresh = false) {
+        switchView('targetSelectionSection');
+
+        // キャッシュが有効な場合はサーバー通信をスキップ
+        if (!forceRefresh && CacheUtils.isCacheValid()) {
+            renderTargetListFromCache();
+            return;
+        }
+
+        toggleLoadingModal(true, loadingText);
+        google.script.run
+            .withSuccessHandler(renderTargetList)
+            .withFailureHandler(handleAppError)
+            .fetchUserAndGroupData();
+    }
+
+    /**
+     * キャッシュからターゲットリストを描画
+     */
+    function renderTargetListFromCache() {
+        dom.targetListContainer.innerHTML = '';
+        const table = document.createElement("table");
+        table.innerHTML = `<thead><tr><th class="column-title">評価対象</th><th>入力日時</th></tr></thead>`;
+        const tbody = document.createElement("tbody");
+
+        (appState.groupListCache || []).forEach(row => {
+            const [targetName, timestamp] = row;
+            const tr = createTargetRow(targetName, timestamp, appState.systemConfig);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        dom.targetListContainer.appendChild(table);
+    }
+
+    /**
+     * ターゲット行を作成（共通関数）
+     */
+    function createTargetRow(targetName, timestamp, systemConfig) {
+        const tr = document.createElement("tr");
+        const tdName = document.createElement("td");
+
+        if (targetName === appState.userGroup) {
+            tdName.textContent = `${targetName} (自分)`;
+            tr.classList.add("row-self");
+        } else if (systemConfig?.isInputEnabled !== 'YES') {
+            tdName.textContent = targetName;
+        } else {
+            tr.dataset.target = targetName;
+            tr.classList.add("clickable-row");
+            const span = document.createElement("span");
+            span.textContent = targetName;
+            span.className = "link-style-text";
+
+            if (timestamp) {
+                span.classList.add("status-done");
+                tr.classList.add("status-done-row");
+            }
+            tdName.appendChild(span);
+        }
+        tr.appendChild(tdName);
+
+        const tdTime = document.createElement("td");
+        if (targetName === appState.userGroup) {
+            tdTime.textContent = "---";
+        } else {
+            if (timestamp) {
+                const d = new Date(timestamp);
+                tdTime.textContent = d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } else {
+                tdTime.textContent = "未入力";
+                tdTime.classList.add("text-alert");
+            }
+        }
+        tr.appendChild(tdTime);
+        return tr;
+    }
+
+    function renderTargetList(json) {
+        toggleLoadingModal(false);
+        try {
+            const data = JSON.parse(json);
+            if (data.error) {
+                const errorP = document.createElement('p');
+                errorP.className = 'error-alert';
+                SecurityUtils.setTextSafely(errorP, data.error);
+                dom.targetListContainer.innerHTML = '';
+                dom.targetListContainer.appendChild(errorP);
+                return;
+            }
+
+            appState.userEmail = data.userEmail;
+            appState.userName = data.userName;
+            appState.userGroup = data.userGroup;
+
+            // キャッシュに保存
+            appState.systemConfig = data.systemConfig;
+            appState.groupListCache = data.groupList;
+            appState.lastFetchTime = Date.now();
+
+            dom.pageTitle.textContent = data.systemConfig?.pageTitle || "相互評価";
+            let groupName = appState.userGroup ? appState.userGroup : "所属グループなし"
+            dom.userInfoDisplay.textContent = `${groupName}：${appState.userName}`;
+
+            if (data.systemConfig?.isOutputEnabled === 'YES' && appState.userGroup) {
+                dom.showResultsButton.classList.remove('is-hidden');
+            } else {
+                dom.showResultsButton.classList.add('is-hidden');
+            }
+
+            dom.targetListContainer.innerHTML = '';
+            const table = document.createElement("table");
+            table.innerHTML = `<thead><tr><th class="column-title">評価対象</th><th>入力日時</th></tr></thead>`;
+            const tbody = document.createElement("tbody");
+
+            (data.groupList || []).forEach(row => {
+                const [targetName, timestamp] = row;
+                const tr = document.createElement("tr");
+                const tdName = document.createElement("td");
+
+                if (targetName === appState.userGroup) {
+                    tdName.textContent = `${targetName} (自分)`;
+                    tr.classList.add("row-self");
+                } else if (data.systemConfig?.isInputEnabled !== 'YES') {
+                    tdName.textContent = targetName;
+                } else {
+                    tr.dataset.target = targetName;
+                    tr.classList.add("clickable-row");
+                    const span = document.createElement("span");
+                    span.textContent = targetName;
+                    span.className = "link-style-text";
+
+                    if (timestamp) {
+                        span.classList.add("status-done");
+                        tr.classList.add("status-done-row");
+                    }
+                    tdName.appendChild(span);
+                }
+                tr.appendChild(tdName);
+
+                const tdTime = document.createElement("td");
+                if (targetName === appState.userGroup) {
+                    tdTime.textContent = "---";
+                } else {
+                    if (timestamp) {
+                        const d = new Date(timestamp);
+                        tdTime.textContent = d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        tdTime.textContent = "未入力";
+                        tdTime.classList.add("text-alert");
+                    }
+                }
+                tr.appendChild(tdTime);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            dom.targetListContainer.appendChild(table);
+        } catch (e) {
+            handleAppError(e);
+        }
+    }
+
+    function fetchEvaluationForm(targetName) {
+        toggleLoadingModal(true, `【${targetName}】の入力画面作成中．．．`);
+        google.script.run
+            .withSuccessHandler(renderEvaluationForm)
+            .withFailureHandler(handleAppError)
+            .fetchEvaluationForm(targetName);
+    }
+
+    function renderEvaluationForm(json) {
+        toggleLoadingModal(false);
+        switchView('evaluationFormSection');
+        try {
+            const data = JSON.parse(json);
+            appState.currentTargetName = data.targetName;
+
+            // フォームデータをキャッシュに保存
+            CacheUtils.setFormCache(data.targetName, data);
+
+            dom.formTitle.textContent = `【${data.targetName}】への評価`;
+            dom.formContainer.innerHTML = '';
+
+            const table = document.createElement("table");
+            table.className = "form-table";
+            const thead = document.createElement("thead");
+            const trHead = document.createElement("tr");
+            const thQ = document.createElement("th");
+            thQ.textContent = "質問項目";
+            thQ.className = "column-question";
+            trHead.appendChild(thQ);
+
+            (data.ratingOptions || []).forEach(option => {
+                const th = document.createElement("th");
+                const longItemSpan = document.createElement("span");
+                longItemSpan.textContent = option;
+                longItemSpan.className = "long-item";
+
+                const shortItemSpan = document.createElement("span");
+                shortItemSpan.className = "short-item";
+                shortItemSpan.textContent = option.split(':')[0];
+
+                th.append(longItemSpan, shortItemSpan);
+                th.title = option;
+                th.className = "column-option";
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+            (data.questionList || []).forEach((qText, idx) => {
+                const type = data.questionTypes[idx];
+                const savedAns = data.answerList[idx];
+                const tr = document.createElement("tr");
+                const tdQ = document.createElement("td");
+                tdQ.textContent = qText;
+                tdQ.className = "td-question-text";
+                tr.appendChild(tdQ);
+
+                if (type === 'R') {
+                    (data.ratingOptions || []).forEach((option) => {
+                        const td = document.createElement("td");
+                        td.className = "cell-center td-radio";
+                        const label = document.createElement("label");
+                        label.className = "radio-label";
+                        const radio = document.createElement("input");
+                        radio.type = "radio";
+                        radio.name = `${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}`;
+                        radio.value = option;
+                        if (savedAns === option) radio.checked = true;
+
+                        const span = document.createElement("span");
+                        span.textContent = option;
+                        span.className = "mobile-label";
+
+                        label.appendChild(radio);
+                        label.appendChild(span);
+                        td.appendChild(label);
+                        tr.appendChild(td);
+                    });
+                } else {
+                    const td = document.createElement("td");
+                    td.colSpan = (data.ratingOptions || []).length;
+                    td.className = "td-textarea";
+                    const area = document.createElement("textarea");
+                    area.name = `${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}`;
+                    area.value = savedAns || "";
+                    area.placeholder = "コメントを入力...";
+                    td.appendChild(area);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            dom.formContainer.appendChild(table);
+        } catch (e) {
+            handleAppError(e);
+        }
+    }
+
+    function submitEvaluation() {
+        const inputs = [];
+        const rows = dom.formContainer.querySelectorAll("tbody tr");
+        let isComplete = true;
+
+        for (let idx = 0; idx < rows.length; idx++) {
+            const tr = rows[idx];
+            const radios = tr.querySelectorAll(`input[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
+
+            if (radios.length > 0) {
+                const checked = tr.querySelector(`input[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]:checked`);
+                if (checked) {
+                    inputs.push(checked.value);
+                    tr.classList.remove("error-row");
+                } else {
+                    inputs.push("");
+                    isComplete = false;
+                    tr.classList.add("error-row");
+                }
+            } else {
+                const area = tr.querySelector(`textarea[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
+                inputs.push(area ? area.value : "");
+                tr.classList.remove("error-row");
+            }
+        }
+
+        if (!isComplete) {
+            showWarningDialog("未回答の項目があります。\n赤くハイライトされた項目を確認してください。");
+            const firstError = dom.formContainer.querySelector(".error-row");
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+            return;
+        }
+
+        dom.submitEvaluationButton.disabled = true;
+        dom.submitEvaluationButton.textContent = "送信中...";
+
+        const payload = {
+            targetName: appState.currentTargetName,
+            answerList: inputs
+        };
+
+        toggleLoadingModal(true, "入力結果を送信中．．．");
+        google.script.run
+            .withSuccessHandler((responseJson) => {
+                toggleLoadingModal(false);
+                dom.submitEvaluationButton.disabled = false;
+                dom.submitEvaluationButton.textContent = "回答を送信";
+
+                // キャッシュをローカル更新（サーバー再取得不要）
+                const now = new Date();
+                CacheUtils.updateGroupListEntry(appState.currentTargetName, now);
+
+                // フォームデータキャッシュも更新
+                const cachedForm = CacheUtils.getFormCache(appState.currentTargetName);
+                if (cachedForm) {
+                    cachedForm.answerList = inputs;
+                    CacheUtils.setFormCache(appState.currentTargetName, cachedForm);
+                }
+
+                // キャッシュから表示（通信なし）
+                switchView('targetSelectionSection');
+                renderTargetListFromCache();
+            })
+            .withFailureHandler((e) => {
+                dom.submitEvaluationButton.disabled = false;
+                dom.submitEvaluationButton.textContent = "回答を送信";
+                handleAppError(e);
+            })
+            .saveEvaluationData(JSON.stringify(payload));
+    }
+
+    function fetchFeedbackResults() {
+        toggleLoadingModal(true, `【${appState.userGroup}】の評価結果を取得中．．．`);
+        google.script.run
+            .withSuccessHandler(renderFeedbackResults)
+            .withFailureHandler(handleAppError)
+            .fetchFeedbackResults(appState.userGroup);
+    }
+
+    function renderFeedbackResults(json) {
+        toggleLoadingModal(false);
+        switchView('resultsDisplaySection');
+        dom.resultsTitle.textContent = `【${appState.userGroup}】が受けた評価`;
+
+        try {
+            const data = JSON.parse(json);
+            appState.summaryDataCache = data.summaryData;
+            renderCommentList(data.commentList);
+            google.charts.setOnLoadCallback(() => {
+                renderChart(data.summaryData);
+            });
+        } catch (e) {
+            handleAppError(e);
+        }
+    }
+
+    function renderCommentList(commentList) {
+        dom.commentsContainer.innerHTML = '';
+        if (!commentList || commentList.length === 0) {
+            dom.commentsContainer.innerHTML = '<p class="no-data-text">コメントはありません</p>';
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        commentList.forEach(group => {
+            const questionText = group.shift();
+            const wrapper = document.createElement("div");
+            wrapper.className = "comment-wrapper";
+            const h3 = document.createElement("h3");
+            h3.textContent = questionText;
+            wrapper.appendChild(h3);
+            if (group.length > 0) {
+                const ul = document.createElement("ul");
+                group.forEach(comment => {
+                    if (comment) {
+                        const li = document.createElement("li");
+                        SecurityUtils.setTextSafely(li, comment);
+                        ul.appendChild(li);
+                    }
+                });
+                wrapper.appendChild(ul);
+            } else {
+                const p = document.createElement("p");
+                p.textContent = "（回答なし）";
+                p.className = "no-answer-text";
+                wrapper.appendChild(p);
+            }
+            fragment.appendChild(wrapper);
+        });
+        dom.commentsContainer.appendChild(fragment);
+    }
+
+    function renderChart(summaryData) {
+        const container = dom.chartContainer;
+        if (!summaryData || summaryData.length < 2) {
+            container.innerHTML = '<p class="no-data-text">集計データがありません</p>';
+            container.style.height = "auto";
+            return;
+        }
+        const chartHeight = (summaryData.length - 1) * 60 + 50;
+        container.style.height = chartHeight + "px";
+        try {
+            const dataTable = google.visualization.arrayToDataTable(summaryData);
+            const options = {
+                isStacked: 'percent',
+                width: '100%',
+                height: chartHeight,
+                chartArea: { left: '35%', top: 30, width: '60%', height: chartHeight - 50 },
+                legend: { position: 'top', maxLines: 2 },
+                colors: APP_CONSTANTS.CHART_COLORS,
+                hAxis: { minValue: 0, maxValue: 1, format: '#%' },
+                vAxis: { textStyle: { fontSize: 12 } }
+            };
+            const chart = new google.visualization.BarChart(container);
+            chart.draw(dataTable, options);
+        } catch (e) {
+            console.error("Chart draw error", e);
+            container.textContent = "グラフ描画エラー";
+        }
+    }
+
+    function toggleLoadingModal(show, loadingText = "通信中...お待ちください") {
+        const dlg = dom.loadingModal.dialog;
+        if (show) {
+            dom.loadingModal.text.textContent = loadingText;
+            if (!dlg.open) dlg.showModal();
+        } else {
+            dlg.close();
+        }
+    }
+
+    function handleAppError(error) {
+        toggleLoadingModal(false);
+        showErrorDialog(error.message || error);
+        console.error(error);
+    }
+
+    let errorTimer = null;
+    function showErrorDialog(message) {
+        const dlg = dom.errorModal.dialog;
+        const msgEl = dom.errorModal.text;
+        msgEl.textContent = message;
+        if (!dlg.open) dlg.showModal();
+        if (errorTimer) clearTimeout(errorTimer);
+        errorTimer = setTimeout(() => {
+            if (dlg.open) dlg.close();
+            errorTimer = null;
+        }, 3000);
+    }
+
+    let warningTimer = null;
+    function showWarningDialog(message) {
+        const dlg = dom.warningModal.dialog;
+        const msgEl = dom.warningModal.text;
+        // XSS対策: innerHTMLではなくtextContentを使用し、改行は別途処理
+        msgEl.textContent = '';
+        const lines = String(message).split('\n');
+        lines.forEach((line, index) => {
+            msgEl.appendChild(document.createTextNode(line));
+            if (index < lines.length - 1) {
+                msgEl.appendChild(document.createElement('br'));
+            }
+        });
+        if (!dlg.open) dlg.showModal();
+        if (warningTimer) clearTimeout(warningTimer);
+        warningTimer = setTimeout(() => {
+            if (dlg.open) dlg.close();
+            warningTimer = null;
+        }, 3000);
+    }
+</script>
