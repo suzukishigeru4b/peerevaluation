@@ -1,0 +1,268 @@
+
+<style>
+/* ================================
+   Design Tokens（共通）
+   ================================ */
+:root{
+  --color-bg:#f5f7fb; --color-surface:#ffffff; --color-header:#eef7ff;
+  --color-text:#222222; --color-muted:#5f6b7a; --color-border:#d0d7de;
+  --color-primary:#1068d4; --color-primary-contrast:#ffffff;
+  --color-danger:#d7263d; --color-danger-contrast:#ffffff;
+  --color-info:#1070c8; --color-warning:#b75c00; --color-success:#2e7d32;
+
+  --radius-xs:6px; --radius-sm:8px; --radius-md:12px;
+  --shadow-1:0 1px 3px rgba(0,0,0,.06);
+  --shadow-2:0 8px 24px rgba(0,0,0,.12);
+
+  --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px;
+  --font-base:16px; --line:1.6;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --color-bg:#0f1216; --color-surface:#12161c; --color-header:#1a2330;
+    --color-text:#e9edf1; --color-muted:#aab4be; --color-border:#2a3240;
+    --shadow-1:none; --shadow-2:none;
+  }
+}
+
+/* ================================
+   Reset / Base（要素セレクタで最低限適用）
+   ================================ */
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--color-bg)}
+body{
+  font:var(--font-base)/var(--line)
+       system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",
+       "Hiragino Kaku Gothic ProN","Meiryo",Helvetica,Arial,sans-serif;
+  color:var(--color-text);
+}
+input,button,select,textarea{font-size:1em}
+h1,h2,h3{margin:0 0 var(--space-3)}
+h1{font-size:1.6rem}
+h2{font-size:1.25rem}
+h3{font-size:1.1rem}
+
+/* ================================
+   Header / Footer（要素にも効かせる）
+   ================================ */
+header, .header{
+  position:sticky; top:0; z-index:100;
+  margin-bottom:var(--space-2); padding:var(--space-2);
+  border-bottom:1px solid var(--color-border);
+  background:var(--color-header);
+  backdrop-filter:saturate(120%) blur(6px);
+}
+.header-title, h1.page-title{
+  font-weight:700;
+  border-left:5px solid var(--color-border);
+  padding:3px 0 3px 10px;
+  margin:0 0 var(--space-2);
+  color:var(--color-text);
+}
+.header-right {
+  text-align: right;
+}
+
+footer, .footer{
+  color:var(--color-muted);
+  border-top:1px solid var(--color-border);
+  padding:var(--space-2) 0; margin-top:var(--space-4);
+}
+
+/* ================================
+   Containers / Sections（要素セレクタ+クラス）
+   ================================ */
+.app-background, main{padding:var(--space-4);background:var(--color-bg)}
+.container{margin:0 auto;max-width:1080px}
+.card, section{
+  background:var(--color-surface); border:1px solid var(--color-border);
+  border-radius:var(--radius-sm); box-shadow:var(--shadow-1);
+  padding:var(--space-4); margin:var(--space-4) 0;
+}
+.section-title, section>h2{font-size:1.25rem;font-weight:700;margin-bottom:var(--space-3)}
+
+.status-row{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}
+.status-message{display:flex;gap:var(--space-2);align-items:center;color:var(--color-muted)}
+.status-message[role="status"]{aria-live:polite}
+.alert-inline{color:var(--color-danger);font-weight:600}
+
+/* ================================
+   Buttons（要素にも適用）
+   ================================ */
+.button-area{display:flex;justify-content:space-between;gap:var(--space-5);margin:var(--space-3) 0}
+.btn, button, .link-button{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:40px;padding:0 var(--space-4);border-radius:var(--radius-sm);
+  font-weight:600;border:1px solid transparent;cursor:pointer;text-decoration:none;
+  transition:transform .06s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease;
+  color:var(--color-text);background:var(--color-surface);border-color:var(--color-border);
+}
+.btn:active, button:active{transform:scale(.99)}
+.btn-primary, button.primary{background:var(--color-primary);color:var(--color-primary-contrast);border-color:transparent}
+.btn-primary:hover, button.primary:hover{filter:brightness(1.05)}
+.btn-outline, button.outline{background:var(--color-surface);color:var(--color-text);border-color:var(--color-border)}
+.btn-danger, button.danger{background:var(--color-danger);color:var(--color-danger-contrast);border-color:transparent}
+
+/* 「一覧に戻る」「回答を送信」などのアクション想定 */
+a.back-link{display:inline-flex;align-items:center;gap:8px;color:var(--color-info);text-decoration:none}
+a.back-link:hover{text-decoration:underline}
+
+/* ================================
+   Forms（評価入力／選択肢／文章）
+   ================================ */
+.form-grid{display:grid;grid-template-columns:1fr;gap:var(--space-4)}
+.form-row{display:grid;grid-template-columns:1fr;gap:var(--space-3)}
+.label,label{color:var(--color-muted);font-weight:600}
+.input-text, .textarea, .select, input[type=text], textarea, select{
+  width:100%;border:1px solid var(--color-border);border-radius:var(--radius-xs);
+  padding:10px 12px;background:var(--color-surface);color:var(--color-text);
+}
+.textarea, textarea{min-height:120px;resize:vertical}
+.radio-group,.checkbox-group{display:grid;gap:8px}
+.radio-item,.checkbox-item{display:flex;align-items:center;gap:8px}
+.helper{color:var(--color-muted);font-size:.9rem}
+
+/* スコア表示やバッジ */
+.score-chip{
+  display:inline-block;background:#f0f4f8;color:var(--color-text);
+  border:1px solid var(--color-border);border-radius:999px;padding:4px 10px;font-weight:600;
+}
+
+/* ================================
+   Tables（受けた評価／集計）
+   ================================ */
+.table, table{width:100%;border-collapse:collapse}
+.table thead tr, table thead tr{background:var(--color-header)}
+.table th,.table td, table th, table td{
+  padding:10px 12px;border-bottom:1px solid var(--color-border);text-align:left
+}
+.table tr:nth-child(even), table tr:nth-child(even){background:#f0f4f8}
+.text-center{text-align:center}
+
+/* 空状態 */
+.empty-state{
+  display:flex;align-items:center;justify-content:center;gap:var(--space-3);
+  color:var(--color-muted);padding:var(--space-4);
+  border:1px dashed var(--color-border);border-radius:var(--radius-sm);
+}
+
+/* ================================
+   Loading / Spinner / Toast
+   ================================ */
+.hidden{display:none !important}
+.spinner,.span-spinner{
+  width:20px;height:20px;border-radius:50%;border:3px solid #eee;border-left-color:var(--color-primary);
+  animation:spin .8s linear infinite
+}
+@keyframes spin{100%{transform:rotate(360deg)}}
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+  background:#333;color:#fff;padding:10px 14px;border-radius:999px;
+  box-shadow:var(--shadow-2);font-size:.9rem;display:none;z-index:1000
+}
+.toast.show{display:block}
+
+/* ================================
+   Dialog（確認／注意）
+   ================================ */
+dialog[open]{
+  margin-top:150px;display:flex;flex-direction:column;justify-content:flex-start;
+  border:2px solid #333;border-radius:var(--radius-md);
+  gap:var(--space-2);padding:var(--space-2);
+  min-width:300px;background:var(--color-surface);color:var(--color-text)
+}
+dialog::backdrop{backdrop-filter:blur(3px)}
+.dialog-header{
+  background:var(--color-header);padding:var(--space-3);
+  border-radius:var(--radius-xs);border:1px solid var(--color-border)
+}
+.dialog-message-container{display:flex;padding:0 var(--space-4);align-items:center;gap:var(--space-2)}
+.confirm-dialog-button-area{display:flex;justify-content:space-around;margin-top:var(--space-3)}
+
+
+/* ================================
+   Visibility / Toggle Utilities
+   ================================ */
+
+/* 旧来の「hidden」系クラスを互換で強制非表示 */
+.hidden,
+.is-hidden,
+[hidden] {
+  display: none !important;
+}
+
+/* 画面（ビュー）切り替え用の標準クラス */
+.screen {
+  /* 通常は表示。レイアウト親のカード/セクションに準拠 */
+  display: block;
+}
+
+/* 非アクティブ画面は完全に非表示（描画・アクセシビリティ的にも隠す） */
+.screen.is-inactive {
+  display: none !important;
+}
+
+/* アクティブ画面明示（将来の演出用フック） */
+.screen.is-active {
+  display: block;
+}
+
+/* スムーズなフェード切り替えが必要な場合のユーティリティ */
+.u-fade {
+  opacity: 1;
+  transition: opacity .18s ease;
+}
+.u-fade.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* メニュータブ等で「不可視だがレイアウト保持」が必要な場合 */
+.is-visually-hidden {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* スクリーンリーダー専用（視覚的に非表示） */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); border: 0;
+}
+
+/* 状態メッセージのライブ領域（支援技術向け） */
+[role="status"] { aria-live: polite; }
+
+/* ================================
+   Responsive（701px–1140px）
+   ================================ */
+@media (min-width:701px) and (max-width:1140px){
+  .container{max-width:960px}
+  .form-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ================================
+   Responsive（<=700px）
+   ================================ */
+@media (max-width:700px){
+  .container{padding:0 var(--space-2)}
+  .button-area{flex-direction:column;gap:var(--space-3)}
+  .table thead, table thead{display:none}
+  .table tr, table tr{display:grid;grid-template-columns:1fr}
+  .table td, table td{
+    display:grid;grid-template-columns:120px 1fr;gap:var(--space-2);
+    align-items:center;padding:var(--space-2)
+  }
+  .table td::before, table td::before{
+    content:attr(data-label);color:var(--color-muted);font-weight:700
+  }
+}
+
+/* ================================
+   Accessibility
+   ================================ */
+:focus-visible{outline:3px solid rgba(16,104,212,.35);outline-offset:3px}
+a,button{color:inherit}
+a:hover{color:var(--color-info)}
+</style>
