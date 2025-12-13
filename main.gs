@@ -1,7 +1,13 @@
 /**
- * 相互評価システム (Server-side Script)
- * Final Version (JSON版)
- * © 2025 Shigeru Suzuki
+ * 相互評価システム (Class Evaluation System)
+ * Version 1.0.0
+ * * Copyright (c) 2025 Shigeru Suzuki
+ * * Released under the MIT License.
+ * https://opensource.org/licenses/MIT
+ * * [免責事項]
+ * 本ソフトウェアの使用により生じた、いかなる損害（データの損失、業務の停止、
+ * 授業運営への支障などを含むがこれに限らない）について、著作者は一切の責任を負いません。
+ * 利用者は自己の責任において本ソフトウェアを使用するものとします。
  */
 
 // ==================================================

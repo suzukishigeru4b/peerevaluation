@@ -282,7 +282,7 @@
         } else {
             if (timestamp) {
                 const d = new Date(timestamp);
-                tdTime.textContent = d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                tdTime.textContent = d.toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
             } else {
                 tdTime.textContent = "未入力";
                 tdTime.classList.add("text-alert");
