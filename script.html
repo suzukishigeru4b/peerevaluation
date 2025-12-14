@@ -1,8 +1,8 @@
 <script>
-    const APP_CONSTANTS = {
-        INPUT_ID_PREFIX: "q_",
-        CHART_COLORS: ['#4285F4', '#8AB4F8', '#ffd700', '#F4B400']
-    };
+      const APP_CONSTANTS = {
+          INPUT_ID_PREFIX: "q_",
+          CHART_COLORS: ['#4285F4', '#8AB4F8', '#ffd700', '#F4B400']
+      };
 
     // ==================================================
     // Security Utilities
@@ -59,6 +59,14 @@
             if (element) {
                 element.textContent = text != null ? String(text) : '';
             }
+        },
+
+        normalizeText: function (str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/\r\n/g, '\n') // 改行コードの統一（念のため）
+                .replace(/\n+/g, '\n')  // 連続する改行を1つにする
+                .replace(/\n+$/, '');   // 最後の改行を削除
         }
     };
 
@@ -496,7 +504,9 @@
                 }
             } else {
                 const area = tr.querySelector(`textarea[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
-                inputs.push(area ? area.value : "");
+                const rawValue = area ? area.value : "";
+                inputs.push(SecurityUtils.normalizeText(rawValue));
+                //inputs.push(area ? area.value : "");
                 tr.classList.remove("error-row");
             }
         }
@@ -581,15 +591,17 @@
         }
         const fragment = document.createDocumentFragment();
         commentList.forEach(group => {
-            const questionText = group.shift();
+            const questionText = group[0];       // 先頭要素（質問文）を取得
+            const answers = group.slice(1);      // 2番目以降（回答）を新しい配列としてコピー 
+            //const questionText = group.shift();
             const wrapper = document.createElement("div");
             wrapper.className = "comment-wrapper";
             const h3 = document.createElement("h3");
             h3.textContent = questionText;
             wrapper.appendChild(h3);
-            if (group.length > 0) {
+            if (answers.length > 0) {
                 const ul = document.createElement("ul");
-                group.forEach(comment => {
+                answers.forEach(comment => {
                     if (comment) {
                         const li = document.createElement("li");
                         SecurityUtils.setTextSafely(li, comment);

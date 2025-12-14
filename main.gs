@@ -202,7 +202,7 @@ function saveEvaluationData(jsonString) {
       const now = new Date();
 
       const sheetData = ss.getSheetByName(SYSTEM_CONFIG.SHEET_NAME_DATA);
-      const rowData = [now, myEmail, targetName, ...sanitizedAnswers];
+      const rowData = [now, myEmail, targetName, ...data.answerList];
       const lastRow = sheetData.getLastRow();
 
       if (lastRow <= 2) {
