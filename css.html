@@ -297,6 +297,28 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary), transparent 80%);
   }
 
+  /* --- 文字数カウンター用スタイル --- */
+  .char-counter {
+    display: block;
+    text-align: right;     /* 右寄せ */
+    font-size: 0.8rem;     /* 少し小さめの文字 */
+    color: var(--color-muted);
+    margin-top: 4px;
+    margin-bottom: 8px;
+  }
+
+  /* 文字数オーバー時のスタイル（赤字＆太字） */
+  .char-counter.is-error {
+    color: var(--color-danger);
+    font-weight: bold;
+  }
+
+  /* オーバー時はテキストエリアの枠線も赤くすると親切です */
+  .td-textarea textarea.is-error {
+    border-color: var(--color-danger);
+    background-color: #fff0f0; /* 薄い赤背景 */
+  }
+
   .radio-label {
     cursor: pointer;
     display: block;

@@ -76,6 +76,8 @@
         userGroup: "",
         currentTargetName: "",
         summaryDataCache: null,
+        questionList: [],
+        questionTypes: [],
         // キャッシュ用
         systemConfig: null,
         groupListCache: null,
@@ -398,7 +400,8 @@
         try {
             const data = JSON.parse(json);
             appState.currentTargetName = data.targetName;
-
+            appState.questionList = data.questionList;
+            appState.questionTypes = data.questionTypes;
             // フォームデータをキャッシュに保存
             CacheUtils.setFormCache(data.targetName, data);
 
@@ -464,6 +467,7 @@
                         tr.appendChild(td);
                     });
                 } else {
+                   // テキストエリア
                     const td = document.createElement("td");
                     td.colSpan = (data.ratingOptions || []).length;
                     td.className = "td-textarea";
@@ -472,6 +476,7 @@
                     area.value = savedAns || "";
                     area.placeholder = "コメントを入力...";
                     td.appendChild(area);
+                    attachCharCounter(area, 1000);          
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
@@ -483,6 +488,47 @@
         }
     }
 
+    /**
+     * テキストエリアに文字数カウンター機能を付与する関数
+     * @param {HTMLTextAreaElement} textarea - 対象のテキストエリア要素
+     * @param {number} maxLen - 最大文字数 (デフォルト1000)
+     */
+    function attachCharCounter(textarea, maxLen = 1000) {
+        if (!textarea) return;
+
+        // 1. カウンター表示用の要素を作成して挿入
+        const counterDiv = document.createElement('div');
+        counterDiv.className = 'char-counter';
+        counterDiv.textContent = `0/${maxLen}`; // 初期表示
+        
+        // テキストエリアの直後に挿入
+        textarea.parentNode.insertBefore(counterDiv, textarea.nextSibling);
+
+        // 2. カウント処理を行う関数
+        const updateCount = () => {
+            const currentLen = textarea.value.length;
+            counterDiv.textContent = `${currentLen}/${maxLen}`;
+
+            // 上限を超えた場合のクラス切り替え
+            if (currentLen > maxLen) {
+                counterDiv.classList.add('is-error');
+                textarea.classList.add('is-error'); // テキストエリア自体の枠も赤くする
+            } else {
+                counterDiv.classList.remove('is-error');
+                textarea.classList.remove('is-error');
+            }
+        };
+    // 3. イベントリスナー登録
+        // 入力時(input)と、初期表示時(ブラウザのオートフィル対策などで一度実行)に更新
+        textarea.addEventListener('input', updateCount);
+        
+        // 初期値が入っている場合のために一度実行
+        updateCount();
+    }
+
+    // ==================================================
+    // 送信処理
+    // ==================================================
     function submitEvaluation() {
         const inputs = [];
         const rows = dom.formContainer.querySelectorAll("tbody tr");
@@ -503,10 +549,16 @@
                     tr.classList.add("error-row");
                 }
             } else {
+                // テキストエリア
+                const MAX_LEN = 1000;
                 const area = tr.querySelector(`textarea[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
                 const rawValue = area ? area.value : "";
-                inputs.push(SecurityUtils.normalizeText(rawValue));
-                //inputs.push(area ? area.value : "");
+                if (rawValue.length > MAX_LEN) {
+                  showWarningDialog(`質問「${appState.questionList[idx]}」の回答が長すぎます。\n${MAX_LEN}文字以内で入力してください。（現在: ${rawValue.length}文字）`);
+                  return; // 送信処理を中断
+                }
+                const sanitized = SecurityUtils.sanitizeInput(rawValue);
+                inputs.push(SecurityUtils.normalizeText(sanitized));
                 tr.classList.remove("error-row");
             }
         }
