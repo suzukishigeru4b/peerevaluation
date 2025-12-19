@@ -26,8 +26,12 @@
     /* 情報・リンク */
     --color-info: #1070c8;
     /* 注意喚起 */
+    --color-warning: #ff6347;
+    --color-warning-contrast: #ffffff;
+    /*
     --color-warning: #b75c00;
     --color-warning-contrast: #ffffff;
+    */
     /* 成功 */
     --color-success: #2e7d32;
     --color-success-contrast: #ffffff;
@@ -300,8 +304,10 @@
   /* --- 文字数カウンター用スタイル --- */
   .char-counter {
     display: block;
-    text-align: right;     /* 右寄せ */
-    font-size: 0.8rem;     /* 少し小さめの文字 */
+    text-align: right;
+    /* 右寄せ */
+    font-size: 0.8rem;
+    /* 少し小さめの文字 */
     color: var(--color-muted);
     margin-top: 4px;
     margin-bottom: 8px;
@@ -316,7 +322,8 @@
   /* オーバー時はテキストエリアの枠線も赤くすると親切です */
   .td-textarea textarea.is-error {
     border-color: var(--color-danger);
-    background-color: #fff0f0; /* 薄い赤背景 */
+    background-color: #fff0f0;
+    /* 薄い赤背景 */
   }
 
   .radio-label {
@@ -519,6 +526,11 @@
   .warning-modal-header {
     background-color: var(--color-warning);
     color: var(--color-warning-contrast);
+  }
+
+  .info-modal-header {
+    background-color: var(--color-success);
+    color: var(--color-success-contrast);
   }
 
   .modal-header h3 {

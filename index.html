@@ -10,7 +10,8 @@
     google.charts.load('current', { packages: ['corechart'] });
   </script>
 
-  <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+  <?!= include('css-common.html'); ?>
+  <?!= include('css-peer.html'); ?>
 </head>
 
 <body>
@@ -75,25 +76,13 @@
     </div>
   </dialog>
 
-  <dialog id="errorModal" role="alertdialog" aria-labelledby="errorModalTitle" aria-describedby="errorMessage"
-    aria-modal="true">
-    <div class="modal-header error-modal-header">
-      <h3 id="errorModalTitle">エラー</h3>
+  <dialog id="messageModal" role="alertdialog" aria-modal="true">
+    <div id="messageModalHeader" class="modal-header">
+      <h3 id="messageModalTitle">メッセージ</h3>
     </div>
     <div class="modal-body">
-      <div class="modal-symbol" role="img" aria-label="警告アイコン">⚠️</div>
-      <p id="errorMessage" role="alert"></p>
-    </div>
-  </dialog>
-
-  <dialog id="warningModal" role="alertdialog" aria-labelledby="warningModalTitle" aria-describedby="warningMessage"
-    aria-modal="true">
-    <div class="modal-header warning-modal-header">
-      <h3 id="warningModalTitle">未入力項目</h3>
-    </div>
-    <div class="modal-body">
-      <div class="modal-symbol" role="img" aria-label="入力アイコン">📝</div>
-      <p id="warningMessage" role="alert"></p>
+      <div id="messageModalSymbol" class="modal-symbol"></div>
+      <p id="messageModalText"></p>
     </div>
   </dialog>
   <?!= HtmlService.createHtmlOutputFromFile('script').getContent(); ?>

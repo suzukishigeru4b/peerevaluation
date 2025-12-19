@@ -1,8 +1,8 @@
 <script>
-      const APP_CONSTANTS = {
-          INPUT_ID_PREFIX: "q_",
-          CHART_COLORS: ['#4285F4', '#8AB4F8', '#ffd700', '#F4B400']
-      };
+    const APP_CONSTANTS = {
+        INPUT_ID_PREFIX: "q_",
+        CHART_COLORS: ['#4285F4', '#8AB4F8', '#ffd700', '#F4B400']
+    };
 
     // ==================================================
     // Security Utilities
@@ -174,13 +174,12 @@
                 dialog: document.getElementById("loadingModal"),
                 text: document.getElementById("loadingText")
             },
-            errorModal: {
-                dialog: document.getElementById("errorModal"),
-                text: document.getElementById("errorMessage")
-            },
-            warningModal: {
-                dialog: document.getElementById("warningModal"),
-                text: document.getElementById("warningMessage")
+            messageModal: {
+                dialog: document.getElementById("messageModal"),
+                header: document.getElementById("messageModalHeader"),
+                title: document.getElementById("messageModalTitle"),
+                symbol: document.getElementById("messageModalSymbol"),
+                text: document.getElementById("messageModalText")
             }
         };
     }
@@ -467,7 +466,7 @@
                         tr.appendChild(td);
                     });
                 } else {
-                   // テキストエリア
+                    // テキストエリア
                     const td = document.createElement("td");
                     td.colSpan = (data.ratingOptions || []).length;
                     td.className = "td-textarea";
@@ -476,7 +475,7 @@
                     area.value = savedAns || "";
                     area.placeholder = "コメントを入力...";
                     td.appendChild(area);
-                    attachCharCounter(area, 1000);          
+                    attachCharCounter(area, 1000);
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
@@ -500,7 +499,7 @@
         const counterDiv = document.createElement('div');
         counterDiv.className = 'char-counter';
         counterDiv.textContent = `0/${maxLen}`; // 初期表示
-        
+
         // テキストエリアの直後に挿入
         textarea.parentNode.insertBefore(counterDiv, textarea.nextSibling);
 
@@ -518,10 +517,10 @@
                 textarea.classList.remove('is-error');
             }
         };
-    // 3. イベントリスナー登録
+        // 3. イベントリスナー登録
         // 入力時(input)と、初期表示時(ブラウザのオートフィル対策などで一度実行)に更新
         textarea.addEventListener('input', updateCount);
-        
+
         // 初期値が入っている場合のために一度実行
         updateCount();
     }
@@ -530,14 +529,17 @@
     // 送信処理
     // ==================================================
     function submitEvaluation() {
+        const MAX_LEN = 1000;
         const inputs = [];
         const rows = dom.formContainer.querySelectorAll("tbody tr");
         let isComplete = true;
+        let isOverLength = false;
+        let isRadioMissing = false;
 
         for (let idx = 0; idx < rows.length; idx++) {
             const tr = rows[idx];
             const radios = tr.querySelectorAll(`input[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
-
+            if (isOverLength) break;
             if (radios.length > 0) {
                 const checked = tr.querySelector(`input[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]:checked`);
                 if (checked) {
@@ -546,16 +548,17 @@
                 } else {
                     inputs.push("");
                     isComplete = false;
+                    isRadioMissing = true;
                     tr.classList.add("error-row");
+                    isRadioMissing = true;
                 }
             } else {
                 // テキストエリア
-                const MAX_LEN = 1000;
                 const area = tr.querySelector(`textarea[name="${APP_CONSTANTS.INPUT_ID_PREFIX}${idx}"]`);
                 const rawValue = area ? area.value : "";
                 if (rawValue.length > MAX_LEN) {
-                  showWarningDialog(`質問「${appState.questionList[idx]}」の回答が長すぎます。\n${MAX_LEN}文字以内で入力してください。（現在: ${rawValue.length}文字）`);
-                  return; // 送信処理を中断
+                    isComplete = false;
+                    isOverLength = true;
                 }
                 const sanitized = SecurityUtils.sanitizeInput(rawValue);
                 inputs.push(SecurityUtils.normalizeText(sanitized));
@@ -564,11 +567,18 @@
         }
 
         if (!isComplete) {
-            showWarningDialog("未回答の項目があります。\n赤くハイライトされた項目を確認してください。");
             const firstError = dom.formContainer.querySelector(".error-row");
             if (firstError) {
                 firstError.scrollIntoView({ behavior: "smooth", block: "center" });
             }
+            let errMessage = 'エラー\n';
+            if (isRadioMissing) {
+                errMessage += '⚠ラジオボタン未回答の項目があります。\n赤くハイライトされた項目を確認してください。\n';
+            }
+            if (isOverLength) {
+                errMessage += `⚠回答が長すぎます。\n${MAX_LEN}文字以内で入力してください。\n`;
+            }
+            showDialog(errMessage, 'warning');
             return;
         }
 
@@ -676,11 +686,11 @@
         const container = dom.chartContainer;
         if (!summaryData || summaryData.length < 2) {
             container.innerHTML = '<p class="no-data-text">集計データがありません</p>';
-            container.style.height = "auto";
+            //container.style.height = "auto";
             return;
         }
         const chartHeight = (summaryData.length - 1) * 60 + 50;
-        container.style.height = chartHeight + "px";
+        //container.style.height = chartHeight + "px";
         try {
             const dataTable = google.visualization.arrayToDataTable(summaryData);
             const options = {
@@ -713,41 +723,60 @@
 
     function handleAppError(error) {
         toggleLoadingModal(false);
-        showErrorDialog(error.message || error);
+        showDialog(error.message || error, 'error');
         console.error(error);
     }
 
-    let errorTimer = null;
-    function showErrorDialog(message) {
-        const dlg = dom.errorModal.dialog;
-        const msgEl = dom.errorModal.text;
-        msgEl.textContent = message;
-        if (!dlg.open) dlg.showModal();
-        if (errorTimer) clearTimeout(errorTimer);
-        errorTimer = setTimeout(() => {
-            if (dlg.open) dlg.close();
-            errorTimer = null;
-        }, 3000);
-    }
+    // モード別の設定
+    const DIALOG_MODES = {
+        error: {
+            title: 'エラー',
+            symbol: '⚠️',
+            headerClass: 'error-modal-header'
+        },
+        warning: {
+            title: '確認',
+            symbol: '⚠️',
+            headerClass: 'warning-modal-header'
+        },
+        info: {
+            title: '完了',
+            symbol: '✅',
+            headerClass: 'info-modal-header'
+        }
+    };
 
-    let warningTimer = null;
-    function showWarningDialog(message) {
-        const dlg = dom.warningModal.dialog;
-        const msgEl = dom.warningModal.text;
+    let dialogTimer = null;
+    /**
+     * 汎用メッセージダイアログを表示
+     * @param {string} message - 表示するメッセージ
+     * @param {string} mode - 'error' | 'warning' | 'info'
+     */
+    function showDialog(message, mode = 'info') {
+        const config = DIALOG_MODES[mode] || DIALOG_MODES.info;
+        const modal = dom.messageModal;
+
+        // ヘッダースタイルのクラスをリセットして新しいモードのクラスを追加
+        modal.header.className = 'modal-header ' + config.headerClass;
+        modal.title.textContent = config.title;
+        modal.symbol.textContent = config.symbol;
+
         // XSS対策: innerHTMLではなくtextContentを使用し、改行は別途処理
-        msgEl.textContent = '';
+        modal.text.textContent = '';
         const lines = String(message).split('\n');
         lines.forEach((line, index) => {
-            msgEl.appendChild(document.createTextNode(line));
+            modal.text.appendChild(document.createTextNode(line));
             if (index < lines.length - 1) {
-                msgEl.appendChild(document.createElement('br'));
+                modal.text.appendChild(document.createElement('br'));
             }
         });
-        if (!dlg.open) dlg.showModal();
-        if (warningTimer) clearTimeout(warningTimer);
-        warningTimer = setTimeout(() => {
-            if (dlg.open) dlg.close();
-            warningTimer = null;
+
+        if (!modal.dialog.open) modal.dialog.showModal();
+
+        if (dialogTimer) clearTimeout(dialogTimer);
+        dialogTimer = setTimeout(() => {
+            if (modal.dialog.open) modal.dialog.close();
+            dialogTimer = null;
         }, 3000);
     }
 </script>

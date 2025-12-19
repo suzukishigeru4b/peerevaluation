@@ -40,6 +40,9 @@ function doGet(e) {
     //.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY);
 }
 
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
 // ==================================================
 // 2.5 セキュリティユーティリティ
 // ==================================================

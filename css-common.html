@@ -1,0 +1,405 @@
+<style>
+  /* =========================================
+     1. Design Tokens (変数定義)
+     ========================================= */
+  :root {
+    /* カラーパレット */
+    --color-bg: #f5f7fb;
+    --color-surface: #ffffff;
+    --color-header: #eef7ff;
+    --color-text: #222222;
+    --color-muted: #5f6b7a;
+    --color-border: #d0d7de;
+    --color-primary: #1068d4;
+    --color-primary-contrast: #ffffff;
+    --color-danger: #d7263d;
+    --color-danger-contrast: #ffffff;
+    --color-info: #1070c8;
+    --color-warning: #ff6347;
+    --color-success: #2e7d32;
+    --color-success-contrast: #ffffff;
+
+    /* スペーシング & サイズ */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+    --space-8: 40px;
+    
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    
+    --shadow-1: 0 1px 3px rgba(0, 0, 0, .06);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, .12);
+
+    --font-base: 16px;
+    --line-height: 1.6;
+  }
+
+  /* ダークモード対応 */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #0f1216;
+      --color-surface: #12161c;
+      --color-header: #1a2330;
+      --color-text: #e9edf1;
+      --color-muted: #aab4be;
+      --color-border: #2a3240;
+      --color-primary: #58a6ff;
+      --shadow-1: none;
+      --shadow-2: 0 4px 20px rgba(0, 0, 0, .4);
+    }
+  }
+
+  /* =========================================
+     2. Base & Layout
+     ========================================= */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    font-size: var(--font-base);
+    color: var(--color-text);
+    line-height: var(--line-height);
+    background-color: var(--color-bg);
+  }
+
+  main, .main-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 1080px;
+    min-height: calc(100vh - var(--space-7));
+    margin: var(--space-4) auto;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-2);
+    border-radius: var(--radius-sm);
+    width: 100%;
+  }
+
+  /* Sticky Header Block */
+  .header-block {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-surface);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow-1);
+  }
+
+  .header-inner {
+    padding: var(--space-2) var(--space-4);
+    background-color: var(--color-header);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .header-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-4);
+  }
+
+  .user-info {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    font-weight: bold;
+  }
+
+  /* アニメーション */
+  .content-block {
+    flex: 1;
+    padding: 0;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* =========================================
+     3. Typography & Lists (Here is the Fix)
+     ========================================= */
+  h1 {
+    margin: 0 0 var(--space-4) 0;
+    font-size: 1.8rem;
+    border-left: 5px solid var(--color-primary);
+    padding-left: var(--space-3);
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: var(--space-2);
+    margin: var(--space-5) 0 var(--space-4) 0;
+    color: var(--color-text);
+  }
+
+  h3 {
+    font-size: 1rem;
+    margin: 0 0 var(--space-2) 0;
+    padding-left: var(--space-2);
+    border-left: 4px solid var(--color-border);
+    color: var(--color-muted);
+  }
+  
+  /* --- 修正: リストの折り返し対応 --- */
+  ul, ol {
+    padding-left: var(--space-5);
+    margin: var(--space-2) 0 var(--space-4) 0;
+  }
+  
+  li {
+    font-size: 0.9rem;
+    margin-bottom: var(--space-1);
+    /* 長い英数字などを強制的に折り返す設定 */
+    overflow-wrap: break-word; 
+    word-wrap: break-word;
+    word-break: break-word; 
+  }
+  /* -------------------------------- */
+
+  .info-message, .error-alert {
+    padding: var(--space-5);
+    border-radius: var(--radius-xs);
+    text-align: center;
+    font-size: 1rem;
+    margin: var(--space-4) 0;
+  }
+  .info-message { background: #e8f4fd; border: 1px solid #90caf9; color: var(--color-info); }
+  .error-alert { background: #ffebee; border: 1px solid #ef9a9a; color: var(--color-danger); }
+  .text-alert { color: var(--color-danger); }
+
+  /* =========================================
+     4. Components (Buttons)
+     ========================================= */
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border-radius: var(--radius-xs);
+    transition: all 0.2s;
+  }
+
+  /* 通常ボタン */
+  button:not(.link-style-button) {
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+  button:not(.link-style-button):hover {
+    background-color: var(--color-bg);
+    border-color: var(--color-muted);
+  }
+
+  /* Primary Button (重要: !important で詳細度勝ちさせる) */
+  .primary-button {
+    background-color: var(--color-primary) !important;
+    color: var(--color-primary-contrast) !important;
+    border: none !important;
+    font-weight: bold;
+  }
+  .primary-button:hover:not(:disabled) {
+    opacity: 0.9;
+    box-shadow: var(--shadow-1);
+  }
+
+  /* Disabled State */
+  button:disabled {
+    background-color: var(--color-border) !important;
+    color: var(--color-muted) !important;
+    cursor: not-allowed !important;
+    border: 1px solid var(--color-border) !important;
+    opacity: 0.7;
+    box-shadow: none !important;
+  }
+
+  .link-style-button, .link-style-text {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--color-info);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .link-style-button:hover { opacity: 0.8; }
+
+  /* ユーティリティ */
+  .flex-space-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .button-area {
+    text-align: right;
+    margin-bottom: var(--space-3);
+  }
+
+  /* =========================================
+     5. Table, Forms & Results
+     ========================================= */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--space-4);
+    font-size: 0.95rem;
+  }
+
+  th, td {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+
+  th {
+    background: var(--color-header);
+    font-weight: bold;
+    color: var(--color-text);
+  }
+  tr:nth-child(even) { background-color: color-mix(in srgb, var(--color-header), transparent 60%); }
+  
+  .clickable-row { cursor: pointer; transition: background-color 0.2s; }
+  .clickable-row:hover { background-color: color-mix(in srgb, var(--color-primary), transparent 90%) !important; }
+
+  /* Inputs */
+  textarea, input[type="text"], input[type="number"] {
+    display: block;
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    font-family: inherit;
+    font-size: 1rem;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+  textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary), transparent 80%);
+  }
+
+  .char-counter {
+    display: block; text-align: right; font-size: 0.8rem; color: var(--color-muted); margin-top: 4px;
+  }
+  .char-counter.is-error { color: var(--color-danger); font-weight: bold; }
+  textarea.is-error { border-color: var(--color-danger); background-color: #fff0f0; }
+
+  /* Results Display */
+  .result-section-divider {
+    margin-top: 30px; margin-bottom: 15px; padding: var(--space-2) 10px;
+    background-color: var(--color-bg); border-left: 4px solid var(--color-muted);
+  }
+  .result-section-divider h3 { margin: 0; border: none; padding: 0; color: var(--color-text); }
+  
+  .chart-wrapper {
+    width: 100%; min-height: 200px; border: 1px solid var(--color-border);
+    display: flex; align-items: center; justify-content: center; background-color: var(--color-surface);
+  }
+  .comment-wrapper { margin-bottom: 25px; }
+  .comment-wrapper ul { padding-left: 20px; margin: 0; color: var(--color-text); }
+  .no-answer-text, .no-data-text { color: var(--color-muted); font-size: 0.9rem; margin-left: 10px; }
+
+  /* =========================================
+     6. Modals
+     ========================================= */
+  dialog {
+    border: none;outline: none; border-radius: var(--radius-sm); box-shadow: var(--shadow-2);
+    min-width: 300px; background-color: var(--color-surface); color: var(--color-text); padding: 0;
+    overflow: hidden;
+  }
+  .modal-header { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .modal-header h3 { margin: 0; border: none; padding: 0; color: inherit; }
+
+  .modal-body {
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: bold;
+    color: var(--color-text);
+  }
+  
+  .info-modal-header { background-color: var(--color-success); color: var(--color-success-contrast); }
+  .error-modal-header { background-color: var(--color-danger); color: var(--color-danger-contrast); }
+  .warning-modal-header { background-color: var(--color-warning); color: var(--color-warning-contrast); }
+  .loading-modal-header { background: var(--color-header); color: var(--color-text); }
+
+  .spinner {
+    font-size: 2rem; animation: hourglass-flip 3s infinite; margin: 0 auto var(--space-4) auto; text-align: center; display: block;
+  }
+  @keyframes hourglass-flip {
+    0%, 40% { transform: rotate(0deg); } 50%, 90% { transform: rotate(180deg); } 100% { transform: rotate(360deg); }
+  }
+
+  .is-hidden { display: none !important; }
+
+  /* =========================================
+     7. Mobile Responsive
+     ========================================= */
+  @media screen and (max-width: 1080px) {
+    main { margin: 0; border-radius: 0; }
+  }
+
+  @media screen and (max-width: 600px) {
+    .header-inner { flex-direction: column; align-items: stretch; }
+    .header-right { flex-direction: row; justify-content: space-between; margin-top: var(--space-2); width: 100%; }
+    
+    .flex-space-between { 
+        flex-direction: column-reverse; 
+        gap: var(--space-3); 
+    }
+    .flex-space-between button { 
+        width: 100%; 
+        padding: var(--space-3) var(--space-4); 
+    }
+    
+    .form-table thead { display: none; }
+    .form-table, .form-table tbody, .form-table tr, .form-table td { display: block; width: 100%; }
+
+    .form-table tr {
+      margin-bottom: var(--space-5); border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm); background: var(--color-surface); box-shadow: var(--shadow-1);
+    }
+    .td-question-text {
+      background: var(--color-header); font-weight: bold; border-bottom: 1px solid var(--color-border);
+      padding: var(--space-3) var(--space-4) !important;
+    }
+    .radio-label { padding: var(--space-3) 0; display: flex; align-items: center; cursor: pointer; }
+    input[type="radio"] { transform: scale(1.4); margin-right: var(--space-2); }
+    .mobile-label { display: inline-block; margin-left: var(--space-2); }
+    
+    .form-table tr.error-row, .form-table tr.error-row:nth-child(even) {
+      border: 2px solid var(--color-danger) !important; background-color: var(--color-surface) !important;
+    }
+    .form-table tr.error-row .td-question-text {
+      background-color: color-mix(in srgb, var(--color-danger), transparent 85%) !important;
+      border-bottom: 1px solid var(--color-danger) !important;
+      color: var(--color-danger);
+    }
+  }
+
+  /* 著作権表示 */
+  .copyright {
+    text-align: right;
+    color: rgba(0, 0, 0, 0.02);
+    margin-bottom: -16px;
+    margin-right: -16px;
+  }
+</style>
